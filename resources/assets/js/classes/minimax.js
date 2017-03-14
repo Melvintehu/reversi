@@ -7,74 +7,82 @@ class Minimax {
 
   constructor(board, player) {
     this.board = board;
-    this.testBoard = new Board(board.tiles, board.currentPlayer);
   }
-
 
   bestMove(player) {
     let start = this.getTime();
-    let depth = 2;
-    let board  = this.cloneObject(this.testBoard.tiles, this.board.currentPlayer);
+    let depth = 8;
+    let alpha = -Infinity;
+    let beta = Infinity;
 
-    let moves = Minimax.generateMoves(board, player);
+    let opponent = player == 1 ? 2 : 1;
+    this.counter = 0;
+
+    let moves = Minimax.generateMoves(this.board, player);
     var bestValue = { total: -Infinity, move: false };
 
     for(let i in moves) {
         let move = moves[i];
-        board.doMove(move.row, move.column, player);
-        let score = this.minimax(board, 2, depth-1);
+        this.board.doMove(move.row, move.column, player);
+        let score = this.minimax(this.board, opponent, depth-1, alpha, beta);
 
         if(score >= bestValue.total) {
           bestValue.total = score;
           bestValue.move = move;
         }
 
-        board.undoMove(move, player);
-      }
+        // alpha beta prunning
+        alpha = Math.max(alpha, bestValue.total);
+        if(beta <= alpha) {
+          break;
+        }
 
+        this.board.undoMove(move, player);
+      }
+      console.log('searched number of nodes: ' , this.counter);
       return bestValue.move;
   }
 
-
-
-  minimax(board, player, depth) {
-    this.printBoard(board, player);
-
+  minimax(board, player, depth, alpha, beta) {
 
     if(depth == 0) {
-      console.log('depth reached');
-      return this.evaluateBoard(board);
+      return this.evaluateBoard(board, player);
     }
 
     let moves = Minimax.generateMoves(board, player);
-    console.log('generated ', moves.length , ' moves for player: ', player);
-
     if(player == 2) {
-      console.log('its players 2 turn');
       var maximumScore = -Infinity;
 
       for(let i in moves) {
         let move = moves[i];
-        board.doMove(move.row, move.column, player);
-        let score = this.minimax(board, 1, depth-1);
-        maximumScore = Math.max(maximumScore, score);
-        board.undoMove(move, player);
-        console.log('boards original state');
-        this.printBoard(board, player);
-      }
+        board.doMove(move.row, move.column, 2);
 
+        maximumScore = Math.max(maximumScore, this.minimax(board, 1, depth-1));
+        board.undoMove(move, player);
+
+        // alpha beta prunning
+        alpha = Math.max(alpha, maximumScore);
+        if(beta <= alpha) {
+          break;
+        }
+      }
       return maximumScore;
 
-    } else {
-      console.log('its players 1 turn');
+    } else if(player == 1){
       var minimumScore = Infinity;
 
       for(let i in moves) {
         let move = moves[i];
-        board.doMove(move.row, move.column, player);
-        let score = this.minimax(board, 2, depth-1);
-        minimumScore = Math.min(minimumScore, score);
+        board.doMove(move.row, move.column, 1);
+
+        minimumScore = Math.min(minimumScore, this.minimax(board, 2, depth-1));
         board.undoMove(move, player);
+
+        // alpha beta prunning
+        beta = Math.min(alpha, minimumScore);
+        if(beta <= alpha) {
+          break;
+        }
       }
 
       return minimumScore;
@@ -83,13 +91,14 @@ class Minimax {
   }
 
   evaluateBoard(board){
-    return 5;
-    // return this.diskSquares(board);
+    this.counter ++;
+    let total = this.diskSquares(board, board.currentPlayer);
+    return total;
   }
 
-  diskSquares(board) {
+  diskSquares(board, player) {
     let tiles = board.tiles;
-    let currentPlayer = board.currentPlayer;
+    let currentPlayer = player;
     let opponent = currentPlayer == 1 ? 2 : 1;
 
     let d = 0;
@@ -102,16 +111,27 @@ class Minimax {
       }
     });
 
+
+
     return d;
   }
 
   // HIER ZIT DE FOUT
   // ER MOET GEKEKEN WORDEN OF EEN ZET VALID IS
   static generateMoves(board, player) {
-    console.log('GENERATING MOVES!! FOR PLAYER: ', player );
-    return board.tiles.filter((tile) => {
-      return tile.isValid(board.tiles, player);
-    });
+    let validTiles = [];
+    for(let i in board.tiles) {
+      let tile = board.tiles[i];
+      if(tile.isValid(board.tiles, player)) {
+        validTiles.push(tile);
+      }
+    }
+
+
+    return validTiles;
+    // return board.tiles.filter((tile) => {
+    //   return tile.isValid(board.tiles, player);
+    // });
   }
 
   cloneObject(tiles, currentPlayer) {
@@ -129,14 +149,16 @@ class Minimax {
   }
 
   printBoard(board, player) {
-    console.log('printing the board');
+    // console.log('player ', player, ' did a move');
     let rows = [];
 
     for(let i = 0; i < 8; i++) {
-        let row = '|' + i + '| ' + board.tiles[(i * 8)].value;
+        let row = '|' + i + '| ' ;
+        let column = '';
         for(let j = 0; j < 8; j++) {
-          row += '' + board.tiles[(i * 8 + j)].value;
+          column += board.tiles[((i * 8) + j)].value;
         }
+        row += column;
         rows.push(row);
     }
     for(let i in rows) {

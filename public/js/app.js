@@ -403,31 +403,6 @@ var NewTile = function () {
       return parseInt(this.row) * 8 + parseInt(this.column);
     }
 
-    /**
-     * pass down all the tiles from a board
-     * @param  {[type]} tiles [description]
-     * @return {[type]}       [description]
-     */
-
-  }, {
-    key: 'findNeighbors',
-    value: function findNeighbors(tiles) {
-      for (var i in tiles) {
-        var neighbor = tiles[i];
-        if (this.inRange(1, neighbor) && neighbor.value != 0) {
-          this.neighbors.push(neighbor);
-        }
-      }
-    }
-  }, {
-    key: 'cloneObject',
-    value: function cloneObject(tiles) {
-      return tiles.map(function (tile) {
-        var tempTile = Object.assign({}, tile);
-        return new NewTile(tempTile.row, tempTile.column, tempTile.value);
-      });
-    }
-
     // boolean checks
 
   }, {
@@ -437,7 +412,6 @@ var NewTile = function () {
 
       this.tiles = tiles;
       this.currentPlayer = currentPlayer;
-      // console.log('IS VALID the currentPlayer is: ', currentPlayer);
 
       if (this.isOccuppied()) {
         return false;
@@ -445,9 +419,10 @@ var NewTile = function () {
       if (this.isIssolated()) {
         return false;
       }
-
+      this.tilesToFlip = [];
       __WEBPACK_IMPORTED_MODULE_0__minimax_directions__["a" /* directions */].forEach(function (direction, i) {
-        var tiles = _this.checkDirection(i);
+        var tiles = [];
+        tiles = _this.checkDirection(i);
 
         if (tiles.length !== 0) {
           _this.tilesToFlip[i] = tiles;
@@ -455,6 +430,7 @@ var NewTile = function () {
       });
 
       if (this.tilesToFlip.length === 0) {
+        this.tilesToFlip = [];
         return false;
       }
 
@@ -465,6 +441,7 @@ var NewTile = function () {
     value: function checkDirection(direction) {
       var tiles = [];
       var neighbor = this.neighbor(direction, this.tiles);
+
       if (this.isOwnTile(neighbor)) {
         return [];
       }
@@ -475,7 +452,6 @@ var NewTile = function () {
       }
 
       if (this.isOwnTile(neighbor)) {
-        console.log('tiles found', tiles);
         return tiles;
       }
 
@@ -548,8 +524,8 @@ var NewTile = function () {
       if (tile.value == 0) {
         return false;
       }
-      // console.log('is currentPlayer still the same? : ', this.currentPlayer);
-      return this.currentPlayer != tile.value && tile.value != 0;
+
+      return this.currentPlayer != tile.value;
     }
   }, {
     key: 'isOwnTile',
@@ -12752,7 +12728,6 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
   methods: {
     drawBoard: function drawBoard() {},
     nextMove: function nextMove() {
-
       var tiles = __WEBPACK_IMPORTED_MODULE_4__classes_board__["a" /* default */].getTilesFromBoard(this.board);
       var board = new __WEBPACK_IMPORTED_MODULE_4__classes_board__["a" /* default */](tiles, 1);
       var minimax = new __WEBPACK_IMPORTED_MODULE_2__classes_minimax__["a" /* default */](board);
@@ -12781,7 +12756,7 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
       var tiles = __WEBPACK_IMPORTED_MODULE_4__classes_board__["a" /* default */].getTilesFromBoard(this.board);
       var board = new __WEBPACK_IMPORTED_MODULE_4__classes_board__["a" /* default */](tiles, player);
 
-      var minimax = new __WEBPACK_IMPORTED_MODULE_3__classes_minimaxOld__["a" /* default */](board);
+      var minimax = new __WEBPACK_IMPORTED_MODULE_2__classes_minimax__["a" /* default */](board);
       var bestMove = minimax.bestMove(player);
 
       board.doMove(bestMove.row, bestMove.column, player);
@@ -12978,72 +12953,84 @@ var Minimax = function () {
     _classCallCheck(this, Minimax);
 
     this.board = board;
-    this.testBoard = new __WEBPACK_IMPORTED_MODULE_2__board__["a" /* default */](board.tiles, board.currentPlayer);
   }
 
   _createClass(Minimax, [{
     key: 'bestMove',
     value: function bestMove(player) {
       var start = this.getTime();
-      var depth = 2;
-      var board = this.cloneObject(this.testBoard.tiles, this.board.currentPlayer);
+      var depth = 8;
+      var alpha = -Infinity;
+      var beta = Infinity;
 
-      var moves = Minimax.generateMoves(board, player);
+      var opponent = player == 1 ? 2 : 1;
+      this.counter = 0;
+
+      var moves = Minimax.generateMoves(this.board, player);
       var bestValue = { total: -Infinity, move: false };
 
       for (var i in moves) {
         var move = moves[i];
-        board.doMove(move.row, move.column, player);
-        var score = this.minimax(board, 2, depth - 1);
+        this.board.doMove(move.row, move.column, player);
+        var score = this.minimax(this.board, opponent, depth - 1, alpha, beta);
 
         if (score >= bestValue.total) {
           bestValue.total = score;
           bestValue.move = move;
         }
 
-        board.undoMove(move, player);
-      }
+        // alpha beta prunning
+        alpha = Math.max(alpha, bestValue.total);
+        if (beta <= alpha) {
+          break;
+        }
 
+        this.board.undoMove(move, player);
+      }
+      console.log('searched number of nodes: ', this.counter);
       return bestValue.move;
     }
   }, {
     key: 'minimax',
-    value: function minimax(board, player, depth) {
-      this.printBoard(board, player);
+    value: function minimax(board, player, depth, alpha, beta) {
 
       if (depth == 0) {
-        console.log('depth reached');
-        return this.evaluateBoard(board);
+        return this.evaluateBoard(board, player);
       }
 
       var moves = Minimax.generateMoves(board, player);
-      console.log('generated ', moves.length, ' moves for player: ', player);
-
       if (player == 2) {
-        console.log('its players 2 turn');
         var maximumScore = -Infinity;
 
         for (var i in moves) {
           var move = moves[i];
-          board.doMove(move.row, move.column, player);
-          var score = this.minimax(board, 1, depth - 1);
-          maximumScore = Math.max(maximumScore, score);
-          board.undoMove(move, player);
-          console.log('boards original state');
-          this.printBoard(board, player);
-        }
+          board.doMove(move.row, move.column, 2);
 
+          maximumScore = Math.max(maximumScore, this.minimax(board, 1, depth - 1));
+          board.undoMove(move, player);
+
+          // alpha beta prunning
+          alpha = Math.max(alpha, maximumScore);
+          if (beta <= alpha) {
+            break;
+          }
+        }
         return maximumScore;
-      } else {
-        console.log('its players 1 turn');
+      } else if (player == 1) {
         var minimumScore = Infinity;
 
         for (var _i in moves) {
           var _move = moves[_i];
-          board.doMove(_move.row, _move.column, player);
-          var _score = this.minimax(board, 2, depth - 1);
-          minimumScore = Math.min(minimumScore, _score);
+          board.doMove(_move.row, _move.column, 1);
+
+          minimumScore = Math.min(minimumScore, this.minimax(board, 2, depth - 1));
           board.undoMove(_move, player);
+
+          // alpha beta prunning
+          beta = Math.min(alpha, minimumScore);
+          if (beta <= alpha) {
+            break;
+          }
         }
 
         return minimumScore;
@@ -13052,14 +13039,15 @@ var Minimax = function () {
   }, {
     key: 'evaluateBoard',
     value: function evaluateBoard(board) {
-      return 5;
-      // return this.diskSquares(board);
+      this.counter++;
+      var total = this.diskSquares(board, board.currentPlayer);
+      return total;
     }
   }, {
     key: 'diskSquares',
-    value: function diskSquares(board) {
+    value: function diskSquares(board, player) {
       var tiles = board.tiles;
-      var currentPlayer = board.currentPlayer;
+      var currentPlayer = player;
       var opponent = currentPlayer == 1 ? 2 : 1;
 
       var d = 0;
@@ -13095,14 +13083,16 @@ var Minimax = function () {
   }, {
     key: 'printBoard',
     value: function printBoard(board, player) {
-      console.log('printing the board');
+      // console.log('player ', player, ' did a move');
       var rows = [];
 
       for (var i = 0; i < 8; i++) {
-        var row = '|' + i + '| ' + board.tiles[i * 8].value;
+        var row = '|' + i + '| ';
+        var column = '';
         for (var j = 0; j < 8; j++) {
-          row += '' + board.tiles[i * 8 + j].value;
+          column += board.tiles[i * 8 + j].value;
         }
+        row += column;
         rows.push(row);
       }
       for (var _i2 in rows) {
@@ -13113,10 +13103,18 @@ var Minimax = function () {
   }], [{
     key: 'generateMoves',
     value: function generateMoves(board, player) {
-      console.log('GENERATING MOVES!! FOR PLAYER: ', player);
-      return board.tiles.filter(function (tile) {
-        return tile.isValid(board.tiles, player);
-      });
+      var validTiles = [];
+      for (var i in board.tiles) {
+        var tile = board.tiles[i];
+        if (tile.isValid(board.tiles, player)) {
+          validTiles.push(tile);
+        }
+      }
+
+      return validTiles;
+      // return board.tiles.filter((tile) => {
+      //   return tile.isValid(board.tiles, player);
+      // });
     }
   }]);
 
@@ -13282,7 +13280,7 @@ var MinimaxOld = function () {
   return MinimaxOld;
 }();
 
-/* harmony default export */ __webpack_exports__["a"] = MinimaxOld;
+/* unused harmony default export */ var _unused_webpack_default_export = MinimaxOld;
 
 /***/ }),
 /* 39 */

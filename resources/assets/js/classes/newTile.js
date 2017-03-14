@@ -16,38 +16,18 @@ class NewTile {
     return parseInt(this.row) * 8 + parseInt(this.column);
   }
 
-  /**
-   * pass down all the tiles from a board
-   * @param  {[type]} tiles [description]
-   * @return {[type]}       [description]
-   */
-  findNeighbors(tiles) {
-    for(let i in tiles) {
-      let neighbor = tiles[i];
-      if( this.inRange(1, neighbor) && neighbor.value != 0 ) {
-        this.neighbors.push(neighbor);
-      }
-    }
-  }
-
-  cloneObject(tiles) {
-    return tiles.map((tile) => {
-        let tempTile = Object.assign({}, tile);
-        return new NewTile(tempTile.row, tempTile.column, tempTile.value);
-      });
-  }
-
   // boolean checks
   isValid(tiles, currentPlayer) {
+
     this.tiles = tiles;
     this.currentPlayer = currentPlayer;
-    // console.log('IS VALID the currentPlayer is: ', currentPlayer);
 
     if( this.isOccuppied() ) { return false; }
     if( this.isIssolated()) { return false; }
-
+    this.tilesToFlip = [];
     directions.forEach((direction, i) => {
-      let tiles = this.checkDirection(i);
+      let tiles = [];
+      tiles = this.checkDirection(i);
 
       if(tiles.length !== 0) {
         this.tilesToFlip[i] = tiles;
@@ -55,6 +35,7 @@ class NewTile {
     });
 
     if (this.tilesToFlip.length === 0) {
+      this.tilesToFlip = [];
       return false
     }
 
@@ -64,6 +45,7 @@ class NewTile {
   checkDirection(direction) {
       let tiles = [];
       let neighbor = this.neighbor(direction, this.tiles);
+
       if ( this.isOwnTile(neighbor) ) {
         return [];
       }
@@ -74,7 +56,6 @@ class NewTile {
       }
 
       if ( this.isOwnTile(neighbor) ) {
-        console.log('tiles found', tiles);
         return tiles;
       }
 
@@ -138,8 +119,8 @@ class NewTile {
     if(tile.value == 0) {
       return false;
     }
-    // console.log('is currentPlayer still the same? : ', this.currentPlayer);
-    return this.currentPlayer != tile.value && tile.value != 0;
+
+    return this.currentPlayer != tile.value;
   }
 
   isOwnTile(tile) {

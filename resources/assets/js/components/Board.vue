@@ -115,7 +115,6 @@ export default {
     },
 
     nextMove() {
-
         let tiles = Board.getTilesFromBoard(this.board);
         let board = new Board(tiles, 1);
         let minimax = new Minimax(board);
@@ -151,7 +150,7 @@ export default {
       let tiles = Board.getTilesFromBoard(this.board);
       let board = new Board(tiles, player);
 
-      let minimax = new MinimaxOld(board);
+      let minimax = new Minimax(board);
       let bestMove = minimax.bestMove(player);
 
         board.doMove(bestMove.row, bestMove.column, player);
